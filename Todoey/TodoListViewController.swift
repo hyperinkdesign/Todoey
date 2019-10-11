@@ -14,8 +14,14 @@ class TodoListViewController: UITableViewController {
     
     var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demogorgon"]   //mutable array
     
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if let items = defaults.array(forKey: "TodoListArray") as? [String] {
+        itemArray = items
+        }
 
     }
     
@@ -64,6 +70,8 @@ class TodoListViewController: UITableViewController {
             //print("success!")
             //print(textField.text)
             self.itemArray.append(textField.text!) // add item fro mthe text field
+            
+            self.defaults.set(self.itemArray, forKey: "TodoListArray") // two things needed to save user defaults. A value such as an array or string etc data type and the key to retrive the item and grab it back
             
             self.tableView.reloadData() // reload the text field to add the item to the array
             
