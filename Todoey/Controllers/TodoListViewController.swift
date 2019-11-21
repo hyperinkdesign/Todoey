@@ -15,29 +15,37 @@ class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
     
+            let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // load the document directory
+    
     let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // use user defaults to pull out an array
-        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-        itemArray = items
-        }
+        
+        // loads the Item .plist
+        loadItems()
+        
+        //print(dataFilePath) // find the save path for the menu items inside the container app
+        
 
-        let newItem1 = Item()
-        newItem1.title = "Find Mike"
-        //newItem1.done = true
-        itemArray.append(newItem1)
+//        let newItem1 = Item() //an array of custom items 
+//        newItem1.title = "Find Mike"
+//        //newItem1.done = true
+//        itemArray.append(newItem1)
+//        
+//        let newItem2 = Item()
+//        newItem2.title = "Buy Eggos"
+//        itemArray.append(newItem2)
+//        
+//        let newItem3 = Item()
+//        newItem3.title = "Destroy Demogorgon"
+//        itemArray.append(newItem3)
         
-        let newItem2 = Item()
-        newItem2.title = "Buy Eggos"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem3.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
-        
+        // use user defaults to pull out an array
+//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
+//            itemArray = items
+//        }
         
     }
     
@@ -74,7 +82,9 @@ class TodoListViewController: UITableViewController {
         //print(itemArray[indexPath.row])
        // print(indexPath.row)
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done // use the nor operator to reverse the statment
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done // use the or operator to reverse the statment
+        
+        saveItems() //call this method when the table data has changed
         
         tableView.reloadData() // force the table view to call the methods again and reload data
         
@@ -107,12 +117,12 @@ class TodoListViewController: UITableViewController {
             newItem.title = textField.text!
             self.itemArray.append(newItem) // add item to the item array
             
+         self.saveItems() //call this method when the table data has changed
+            
             //self.itemArray.append(textField.text!) // add item fro mthe text field
             
-            self.defaults.set(self.itemArray, forKey: "TodoListArray") // two things needed to save user defaults. A value such as an array or string etc data type and the key to retrive the item and grab it back
-            
-            self.tableView.reloadData() // reload the text field to add the item to the array
-            
+            //self.defaults.set(self.itemArray, forKey: "TodoListArray") // two things needed to save user defaults. A value such as an array or string etc data type and the key to retrive the item and grab it back
+
         }
         
         alert.addTextField { (alertTextField) in
@@ -127,5 +137,35 @@ class TodoListViewController: UITableViewController {
         
         present(alert, animated: true, completion: nil)
     }
+    
+    // MARK - Model Manipulation Methods
+    
+    func saveItems() {
+        
+        let encoder = PropertyListEncoder() // a new object
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Error encoding item array, \(error)")
+        }
+        // encode the item array into a p.list
+        
+        self.tableView.reloadData() // reload the text field to add the item to the array
+    }
+  
+    func loadItems() {
+        
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                print("Error decoding item array, \(error)")
+            }
+        }
+    }
+    
 }
 

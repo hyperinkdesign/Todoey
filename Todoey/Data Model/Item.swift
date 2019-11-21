@@ -9,7 +9,7 @@
 import Foundation
 
 
-class Item {
+class Item: Codable { // conforms to both Encodable, Decodable protacols
     var title: String = ""
     var done: Bool = false
 }
