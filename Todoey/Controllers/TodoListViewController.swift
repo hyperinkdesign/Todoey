@@ -7,6 +7,10 @@
 //
 
 import UIKit
+import CoreData
+
+
+//CRUD: Creating Reading Updating Destroying using the context then comit to persisent data
 
 class TodoListViewController: UITableViewController {
 
@@ -15,16 +19,19 @@ class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
     
-            let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // load the document directory
+           // let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // load the document directory
     
-    let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    //let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         
         // loads the Item .plist
-        loadItems()
+        loadItems() // initially load save items from core data
         
         //print(dataFilePath) // find the save path for the menu items inside the container app
         
@@ -82,7 +89,12 @@ class TodoListViewController: UITableViewController {
         //print(itemArray[indexPath.row])
        // print(indexPath.row)
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done // use the or operator to reverse the statment
+        //itemArray[indexPath.row].setValue("Completed", forKey: "title") // a method to update the NSMangedObject
+        
+        //itemArray[indexPath.row].done = !itemArray[indexPath.row].done // use the or operator to reverse the statment
+        
+//        context.delete(itemArray[indexPath.row]) // remove the data from the permenent store
+//        itemArray.remove(at: indexPath.row) //remove the current item from the item array
         
         saveItems() //call this method when the table data has changed
         
@@ -113,8 +125,10 @@ class TodoListViewController: UITableViewController {
             //print("success!")
             //print(textField.text)
             
-            let newItem = Item()
+            let newItem = Item(context: self.context) // create the context core data object
+            //new core data NSmanagedObjects
             newItem.title = textField.text!
+            newItem.done = false // sets new items to 'not done' see the core data entities
             self.itemArray.append(newItem) // add item to the item array
             
          self.saveItems() //call this method when the table data has changed
@@ -140,32 +154,86 @@ class TodoListViewController: UITableViewController {
     
     // MARK - Model Manipulation Methods
     
-    func saveItems() {
+    func saveItems() { // commits the current content to the context of core data
         
-        let encoder = PropertyListEncoder() // a new object
+        //let encoder = PropertyListEncoder() // a new object
         
         do {
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFilePath!)
+//            let data = try encoder.encode(itemArray)
+//            try data.write(to: dataFilePath!)
+            
+            try context.save()
         } catch {
-            print("Error encoding item array, \(error)")
+            print("Error saving context \(error)")
         }
         // encode the item array into a p.list
         
         self.tableView.reloadData() // reload the text field to add the item to the array
     }
   
-    func loadItems() {
+    
+    // load items from the core data model when apps terminated using persistant data
+//    func loadItems() {
+//
+//        if let data = try? Data(contentsOf: dataFilePath!) {
+//            let decoder = PropertyListDecoder()
+//            do {
+//                itemArray = try decoder.decode([Item].self, from: data)
+//            } catch {
+//                print("Error decoding item array, \(error)")
+//            }
+//        }
+//    }
+    
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+       // let request : NSFetchRequest<Item> = Item.fetchRequest()
+        // have to speak to the context before we can accesss the core data
+        do {
+        itemArray = try context.fetch(request)
+        } catch {
+            print("Error fetching data from context \(error)")
+        }
         
-        if let data = try? Data(contentsOf: dataFilePath!) {
-            let decoder = PropertyListDecoder()
-            do {
-                itemArray = try decoder.decode([Item].self, from: data)
-            } catch {
-                print("Error decoding item array, \(error)")
+        tableView.reloadData()
+    }
+    
+
+}
+
+    // MARK - Search bar methods. IMPORTIANT! move multiple delegate protocol methods outside of the main class using extensions
+
+extension TodoListViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        // query to specify what we want to get back from the DB. NSPredicate is an NSFoundartion class from Objective-C
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // [cd] case and diacritic sensitive. look for the tables which contain the text. modifiers and logical conditions CONTAINS %@ etc. check the realm website cheetsheet pdf. String comparison operators. Check out NSPredicate
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request)
+        
+//        do {
+//            itemArray = try context.fetch(request)
+//        } catch {
+//            print("Error fetching data from context \(error)")
+//        }
+        
+        //tableView.reloadData()
+        
+        //print(searchBar.text!)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems() // re-fetches all the items again from the persistant store method
+            
+            DispatchQueue.main.async { // run this method on the main queue
+                searchBar.resignFirstResponder() //no longer be the item selected
             }
         }
     }
-    
+
+
 }
 

@@ -8,8 +8,8 @@
 
 import Foundation
 
-
-class Item: Codable { // conforms to both Encodable, Decodable protacols
-    var title: String = ""
-    var done: Bool = false
+// this class has been replaced with the core data model
+class t_Item: Codable { // conforms to both Encodable, Decodable protacols
+    var t_title: String = ""
+    var t_done: Bool = false
 }
