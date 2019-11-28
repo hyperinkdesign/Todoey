@@ -18,6 +18,11 @@ class TodoListViewController: UITableViewController {
     //var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demogorgon"]   // mutable array
 
     var itemArray = [Item]()
+    var selectedCatagory : Catagory? {
+        didSet{ //fires as soon as selectedCatagory is used ie a cell is clicked
+            loadItems()
+        }
+    }
     
            // let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // load the document directory
     
@@ -31,7 +36,7 @@ class TodoListViewController: UITableViewController {
         
         
         // loads the Item .plist
-        loadItems() // initially load save items from core data
+        //loadItems() // initially load save items from core data
         
         //print(dataFilePath) // find the save path for the menu items inside the container app
         
@@ -56,7 +61,7 @@ class TodoListViewController: UITableViewController {
         
     }
     
-    //MARK - Table View Data Source Methods
+    //MARK: - Table View Data Source Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { // -> return
         return itemArray.count // create 3 rows in the table view
@@ -83,7 +88,7 @@ class TodoListViewController: UITableViewController {
         return cell
     }
     
-    //MARK - TableView Delegate Methods
+    //MARK: - TableView Delegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //print(itemArray[indexPath.row])
@@ -111,7 +116,7 @@ class TodoListViewController: UITableViewController {
     }
     
     
-    //MARK - Add new items
+    //MARK: - Add new items
     
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) { // add the bar button item
@@ -129,6 +134,9 @@ class TodoListViewController: UITableViewController {
             //new core data NSmanagedObjects
             newItem.title = textField.text!
             newItem.done = false // sets new items to 'not done' see the core data entities
+            
+            newItem.parentCatagory = self.selectedCatagory
+            
             self.itemArray.append(newItem) // add item to the item array
             
          self.saveItems() //call this method when the table data has changed
@@ -152,7 +160,7 @@ class TodoListViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
     
-    // MARK - Model Manipulation Methods
+    // MARK: - Model Manipulation Methods
     
     func saveItems() { // commits the current content to the context of core data
         
@@ -185,9 +193,23 @@ class TodoListViewController: UITableViewController {
 //        }
 //    }
     
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+    //loads the items from the items array
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
        // let request : NSFetchRequest<Item> = Item.fetchRequest()
         // have to speak to the context before we can accesss the core data
+        let catagoryPredicate = NSPredicate(format: "parentCatagory.name MATCHES %@", selectedCatagory!.name!)
+        
+        
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [catagoryPredicate, additionalPredicate])
+        } else {
+            request.predicate = catagoryPredicate
+        }
+//        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [catagoryPredicate, predicate])
+//
+//            request.predicate = predicate
+    
+        
         do {
         itemArray = try context.fetch(request)
         } catch {
@@ -197,21 +219,21 @@ class TodoListViewController: UITableViewController {
         tableView.reloadData()
     }
     
-
 }
 
-    // MARK - Search bar methods. IMPORTIANT! move multiple delegate protocol methods outside of the main class using extensions
+// MARK: - Search bar methods. IMPORTIANT! move multiple delegate protocol methods outside of the main class using extensions
 
-extension TodoListViewController: UISearchBarDelegate {
+extension TodoListViewController: UISearchBarDelegate {// extends base view contoller outside of the main controller. modualise and split functionality. method triggered when used presses the search bar field
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         let request : NSFetchRequest<Item> = Item.fetchRequest()
-        // query to specify what we want to get back from the DB. NSPredicate is an NSFoundartion class from Objective-C
-        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // [cd] case and diacritic sensitive. look for the tables which contain the text. modifiers and logical conditions CONTAINS %@ etc. check the realm website cheetsheet pdf. String comparison operators. Check out NSPredicate
+        // query to specify what we want to get back from the DB. NSPredicate is an NSFoundation class from Objective-C
+        print(searchBar.text!)
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // [cd] case and diacritic sensitive. look for the tables which contain the text. modifiers and logical conditions CONTAINS %@ etc. check the realm website cheetsheet pdf. String comparison operators. Check out NSPredicate. initialsie using format
         
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
         
-        loadItems(with: request)
+        loadItems(with: request, predicate: predicate)
         
 //        do {
 //            itemArray = try context.fetch(request)
