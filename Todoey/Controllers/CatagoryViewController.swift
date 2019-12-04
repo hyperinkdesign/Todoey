@@ -7,31 +7,33 @@
 //
 
 import UIKit
-import CoreData
+//import CoreData
+import RealmSwift
 
 class CatagoryViewController: UITableViewController {
     
-    var catagories = [Catagory]()
+    let realm = try! Realm() //new access point to realm datababse
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var categories: Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        loadCatagories()
+        loadCategories()
     }
     
     //MARK: - TableView Datasource Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { // -> return
-        return catagories.count // return number of rows in catagories table
+        
+        return categories?.count ?? 1 // return number of rows in catagories table. nil coalecing. return at least one row if category count is nil.
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell { // ->return
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CatagoryCell", for: indexPath) //currrent indexpath its looking to populate
         
-        cell.textLabel?.text = catagories[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No categories added yet"
 
         return cell
     }
@@ -45,13 +47,10 @@ class CatagoryViewController: UITableViewController {
         let alert = UIAlertController(title: "Add new todo item", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
 
-            let newCatagory = Catagory(context: self.context) // create the context core data object
+            let newCategory = Category() // create the context core data object
             //new core data NSmanagedObjects
-            newCatagory.name = textField.text!
-           
-            self.catagories.append(newCatagory) // add item to the item array
-            
-            self.saveCatagories()
+            newCategory.name = textField.text!
+            self.save(category: newCategory)
         }
         
 //        alert.addTextField { (alertTextField) in
@@ -84,34 +83,31 @@ class CatagoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCatagory = catagories[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
     
     
     //MARK: - Data Manipulation Methods. save data and load data. CRUD
     
-    func saveCatagories() { // commits the current content to the context of core data
+    func save(category: Category) { // commits the current content to the context of core data
         
         do {
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         } catch {
             print("Error saving catagory \(error)")
         }
         self.tableView.reloadData() // reload the text field to add the item to the array
     }
     
-    func loadCatagories() {
+    func loadCategories() {
         
-        let request : NSFetchRequest<Catagory> = Catagory.fetchRequest() //
+        categories = realm.objects(Category.self)
         
-        do {
-            catagories = try context.fetch(request)
-        }catch{
-            print("Error loading catagories \(error)")
-        }
+        tableView.reloadData()
         
-        self.tableView.reloadData() // reload the text field to add the item to the array
     }
 
     
